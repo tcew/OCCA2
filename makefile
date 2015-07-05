@@ -50,6 +50,11 @@ else
 .SUFFIXES:
 
 all: $(occaLPath)/libocca.so $(occaBPath)/occa $(occaBPath)/occainfo
+	@echo -e '\n'
+	@echo '+-------------------[ DEPRECATED ]-------------------+'
+	@echo '|     Moved to [https://github.com/libocca/occa]     |'
+	@echo '+====================================================+'
+	@echo -e '\n'
 
 $(occaLPath)/libocca.so:$(objects) $(headers)
 	$(compiler) $(compilerFlags) $(sharedFlag) -o $(occaLPath)/libocca.so $(flags) $(objects) $(paths) $(filter-out -locca, $(links))
