@@ -301,62 +301,56 @@ function unaliasCommand {
     command echo $1
 }
 
-function mpiCompilerVendor {
-    local mpiCompiler=$1
-    local compiler
-
-    # gcc, clang
-    compiler=$($mpiCompiler --chichamanga 2>&1 > /dev/null | command grep -m 1 error | command sed 's/\([^:]*\):.*/\1/g')
-
-    if [ ! -z $compiler ]; then command echo $compiler; return; fi
-
-    # intel
-    compiler=$($mpiCompiler --chichamanga 2>&1 > /dev/null | command grep -m 1 "command not found" | command sed 's/[^:]*:[^:]*:[ \t]*\([^:]*\):.*/\1/g')
-
-    if [ ! -z $compiler ]; then command echo $compiler; return; fi
-
-    command echo ""
-}
-
 function compilerName {
     local chosenCompiler=$1
     local realCompiler=$(realCommand $chosenCompiler)
     local unaliasedCompiler=$(unaliasCommand $realCompiler)
     local strippedCompiler=$(stripPath $unaliasedCompiler)
-    local compiler
-
-    case $strippedCompiler in
-        mpi*) compiler=$(mpiCompilerVendor $strippedCompiler) ;;
-        *)    compiler=$strippedCompiler                      ;;
-    esac
-
-    command echo $compiler
+    command echo $strippedCompiler
 }
 
 function compilerVendor {
     local chosenCompiler=$1
     local compiler=$(compilerName $1)
 
+    # Fortran Compilers
     case $compiler in
-        # C/C++ Compilers
-        g++* | gcc*)       command echo GCC          ;;
-        clang*)            command echo LLVM         ;;
-        icc* | icpc*)      command echo INTEL        ;;
-        xlc*)              command echo IBM          ;;
-        pgcc* | pgc++*)    command echo PGI          ;;
-        pathcc* | pathCC*) command echo PATHSCALE    ;;
-        aCC*)              command echo HP           ;; # [-] Will fail with cc (Cray's compiler name ...)
-        cc* | CC*)         command echo CRAY         ;;
-        cl*.exe*)          command echo VISUALSTUDIO ;;
+        gfortran*)         command echo GCC      ; return;;
+        ifort*)            command echo INTEL    ; return;;
+        ftn*)              command echo CRAY     ; return;;
+        xlf*)              command echo IBM      ; return;;
+        pgfortran*)        command echo PGI      ; return;;
+        pathf9*)           command echo PATHSCALE; return;;
+    esac
 
-        # Fortran Compilers
-        gfortran*)         command echo GCC          ;;
-        ifort*)            command echo INTEL        ;;
-        ftn*)              command echo CRAY         ;;
-        xlf*)              command echo IBM          ;;
-        pgfortran*)        command echo PGI          ;;
-        pathf9*)           command echo PATHSCALE    ;;
+    local b_GNU=0
+    local b_LLVM=1
+    local b_Intel=2
+    local b_Pathscale=3
+    local b_IBM=4
+    local b_PGI=5
+    local b_HP=6
+    local b_VisualStudio=7
+    local b_Cray=8
 
+    local testFilename="${OCCA_DIR}/scripts/compilerVendorTest.cpp"
+    local binaryFilename="${OCCA_DIR}/scripts/compilerVendorTest"
+
+    eval "${chosenCompiler} ${testFilename} -o ${binaryFilename} > /dev/null 2>&1"
+    eval "${binaryFilename}"
+    bit=$?
+
+    # C/C++ Compilers
+    case $bit in
+        ${b_GNU})          command echo GCC          ;;
+        ${b_LLVM})         command echo LLVM         ;;
+        ${b_Intel})        command echo INTEL        ;;
+        ${b_IBM})          command echo IBM          ;;
+        ${b_PGI})          command echo PGI          ;;
+        ${b_Pathscale})    command echo PATHSCALE    ;;
+        ${b_HP})           command echo HP           ;;
+        ${b_Cray})         command echo CRAY         ;;
+        ${b_VisualStudio}) command echo VISUALSTUDIO ;;
         *)                 command echo N/A          ;;
     esac
 }
