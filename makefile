@@ -125,19 +125,19 @@ test:
 	make -j 4 CXXFLAGS='-g' FCFLAGS='-g'
 
 	cd $(OCCA_DIR)/examples/addVectors/cpp; \
-	make -j 4 CXXFLAGS='-g' FCFLAGS='-g'; \
+	make clean; make -j 4 CXXFLAGS='-g' FCFLAGS='-g'; \
 	./main
 
 	cd $(OCCA_DIR)/examples/addVectors/c; \
-	make -j 4 CXXFLAGS='-g' FCFLAGS='-g'; \
+	make clean; make -j 4 CXXFLAGS='-g' FCFLAGS='-g'; \
 	./main
 
 	cd $(OCCA_DIR)/examples/addVectors/f90; \
-	make -j 4 CXXFLAGS='-g' FCFLAGS='-g'; \
+	make clean; make -j 4 CXXFLAGS='-g' FCFLAGS='-g'; \
 	./main
 
 	cd $(OCCA_DIR)/examples/reduction/; \
-	make -j 4 CXXFLAGS='-g' FCFLAGS='-g'; \
+	make clean; make -j 4 CXXFLAGS='-g' FCFLAGS='-g'; \
 	./main
 
 	cd $(OCCA_DIR)/examples/usingArrays/; \

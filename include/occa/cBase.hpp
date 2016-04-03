@@ -62,14 +62,17 @@ OCCA_START_EXTERN_C
 
 typedef void* occaDevice;
 typedef void* occaKernel;
-
-typedef struct occaTypePtr_t*      occaMemory;
-typedef struct occaTypePtr_t*      occaType;
-typedef struct occaArgumentList_t* occaArgumentList;
+typedef void* occaStream;
 
 struct occaType_t;
+struct occaTypePtr_t {
+  struct occaType_t *ptr;
+};
 
-typedef void* occaStream;
+typedef occaTypePtr_t occaType;
+typedef occaType      occaMemory;
+
+typedef struct occaArgumentList_t* occaArgumentList;
 
 typedef struct occaStreamTag_t {
   double tagTime;
@@ -316,7 +319,7 @@ OCCA_LFUNC void OCCA_RFUNC occaArgumentListFree(occaArgumentList list);
 
 OCCA_LFUNC void OCCA_RFUNC occaArgumentListAddArg(occaArgumentList list,
                                                   int argPos,
-                                                  void *type);
+                                                  occaType type);
 
 OCCA_LFUNC void OCCA_RFUNC occaKernelRun_(occaKernel kernel,
                                           occaArgumentList list);

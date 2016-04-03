@@ -43,16 +43,16 @@ def cKernelDeclarations(N):
     return '\n\n'.join(cKernelDeclaration(n + 1) for n in range(N))
 
 def cKernelDeclaration(N):
-    return 'OCCA_LFUNC void OCCA_RFUNC occaKernelRun{0}(occaKernel kernel, {1});'.format(N, ' '.join('void *arg' + str(n) + nlc(n, N) for n in range(N)) )
+    return 'OCCA_LFUNC void OCCA_RFUNC occaKernelRun{0}(occaKernel kernel, {1});'.format(N, ' '.join('occaType arg' + str(n) + nlc(n, N) for n in range(N)) )
 
 
 def cKernelDefinitions(N):
     return '\n\n'.join(cKernelDefinition(n + 1) for n in range(N))
 
 def cKernelDefinition(N):
-    argsContent = ', '.join('((occaType) arg{})->ptr'.format(n) for n in range(N))
+    argsContent = ', '.join('arg{}.ptr'.format(n) for n in range(N))
 
-    return ('void OCCA_RFUNC occaKernelRun{0}(occaKernel kernel, {1}){{\n'.format(N, ' '.join('void *arg' + str(n) + nlc(n, N) for n in range(N)) ) + """
+    return ('void OCCA_RFUNC occaKernelRun{0}(occaKernel kernel, {1}){{\n'.format(N, ' '.join('occaType arg' + str(n) + nlc(n, N) for n in range(N)) ) + """
   occaType_t *args[{0}] = {{ {1} }};
   occaKernelRunN(kernel, {0}, args);
 }}""".format(N, argsContent))

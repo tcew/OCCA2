@@ -19,45 +19,6 @@ struct occaType_t {
     value() {}
 };
 
-struct occaTypePtr_t {
-  struct occaType_t *ptr;
-
-  inline occaTypePtr_t() :
-    ptr(new occaType_t()) {}
-
-  inline occaTypePtr_t(void *ptr_) :
-    ptr((occaType_t*) ptr_) {}
-
-  inline occaTypePtr_t(int type_) :
-    ptr(new occaType_t(type_)) {}
-
-  inline occaType_t& occaType() {
-    return *ptr;
-  }
-
-  inline int& type() {
-    return ptr->type;
-  }
-
-  inline int type() const  {
-    return ptr->type;
-  }
-
-  inline occa::kernelArg_t& value() {
-    return ptr->value;
-  }
-
-  inline occa::kernelArg_t value() const  {
-    return ptr->value;
-  }
-
-  inline void swap(occaTypePtr_t *tp) {
-    occaType_t *tmp = ptr;
-    ptr = tp->ptr;
-    tp->ptr = tmp;
-  }
-};
-
 struct occaArgumentList_t {
   int argc;
   occaType_t *argv[100];
@@ -83,134 +44,148 @@ OCCA_END_EXTERN_C
 
 //---[ TypeCasting ]------------------
 namespace occa {
-  std::string typeToStr(occaType value) {
-    occa::kernelArg_t &value_ = value->value();
-    const int valueType       = value->type();
+  namespace c {
+    std::string typeToStr(occaType value) {
+      occa::kernelArg_t &value_ = value.ptr->value;
+      const int valueType       = value.ptr->type;
 
-    switch(valueType) {
-    case OCCA_TYPE_INT    : return occa::toString(value_.data.int_);
-    case OCCA_TYPE_UINT   : return occa::toString(value_.data.uint_);
-    case OCCA_TYPE_CHAR   : return occa::toString(value_.data.char_);
-    case OCCA_TYPE_UCHAR  : return occa::toString(value_.data.uchar_);
-    case OCCA_TYPE_SHORT  : return occa::toString(value_.data.short_);
-    case OCCA_TYPE_USHORT : return occa::toString(value_.data.ushort_);
-    case OCCA_TYPE_LONG   : return occa::toString(value_.data.long_);
-    case OCCA_TYPE_ULONG  : return occa::toString(value_.data.uintptr_t_);
+      switch(valueType) {
+      case OCCA_TYPE_INT    : return occa::toString(value_.data.int_);
+      case OCCA_TYPE_UINT   : return occa::toString(value_.data.uint_);
+      case OCCA_TYPE_CHAR   : return occa::toString(value_.data.char_);
+      case OCCA_TYPE_UCHAR  : return occa::toString(value_.data.uchar_);
+      case OCCA_TYPE_SHORT  : return occa::toString(value_.data.short_);
+      case OCCA_TYPE_USHORT : return occa::toString(value_.data.ushort_);
+      case OCCA_TYPE_LONG   : return occa::toString(value_.data.long_);
+      case OCCA_TYPE_ULONG  : return occa::toString(value_.data.uintptr_t_);
 
-    case OCCA_TYPE_FLOAT  : return occa::toString(value_.data.float_);
-    case OCCA_TYPE_DOUBLE : return occa::toString(value_.data.double_);
+      case OCCA_TYPE_FLOAT  : return occa::toString(value_.data.float_);
+      case OCCA_TYPE_DOUBLE : return occa::toString(value_.data.double_);
 
-    case OCCA_TYPE_STRING : return std::string((char*) value_.data.void_);
-    default:
-      std::cout << "Wrong type input in [occaKernelInfoAddDefine]\n";
+      case OCCA_TYPE_STRING : return std::string((char*) value_.data.void_);
+      default:
+        std::cout << "Wrong type input in [occaKernelInfoAddDefine]\n";
+      }
+
+      return "";
     }
 
-    return "";
+    occaType wrapType(occaType_t &type) {
+      occaType t;
+      t.ptr = &type;
+      return t;
+    }
+
+    occaMemory wrapMemory(occaType_t &type) {
+      occaMemory m;
+      m.ptr = &type;
+      return m;
+    }
   }
 }
 
 OCCA_START_EXTERN_C
 
 occaType OCCA_RFUNC occaPtr(void *ptr) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_INT);
-  type->value().data.void_ = ptr;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_INT));
+  type.value.data.void_ = ptr;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaInt(int value) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_INT);
-  type->value().size      = sizeof(int);
-  type->value().data.int_ = value;
-  type->value().info      = occa::kArgInfo::none;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_INT));
+  type.value.size      = sizeof(int);
+  type.value.data.int_ = value;
+  type.value.info      = occa::kArgInfo::none;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaUInt(unsigned int value) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_UINT);
-  type->value().size       = sizeof(unsigned int);
-  type->value().data.uint_ = value;
-  type->value().info       = occa::kArgInfo::none;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_UINT));
+  type.value.size       = sizeof(unsigned int);
+  type.value.data.uint_ = value;
+  type.value.info       = occa::kArgInfo::none;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaChar(char value) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_CHAR);
-  type->value().size       = sizeof(char);
-  type->value().data.char_ = value;
-  type->value().info       = occa::kArgInfo::none;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_CHAR));
+  type.value.size       = sizeof(char);
+  type.value.data.char_ = value;
+  type.value.info       = occa::kArgInfo::none;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaUChar(unsigned char value) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_UCHAR);
-  type->value().size        = sizeof(unsigned char);
-  type->value().data.uchar_ = value;
-  type->value().info        = occa::kArgInfo::none;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_UCHAR));
+  type.value.size        = sizeof(unsigned char);
+  type.value.data.uchar_ = value;
+  type.value.info        = occa::kArgInfo::none;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaShort(short value) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_SHORT);
-  type->value().size        = sizeof(short);
-  type->value().data.short_ = value;
-  type->value().info        = occa::kArgInfo::none;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_SHORT));
+  type.value.size        = sizeof(short);
+  type.value.data.short_ = value;
+  type.value.info        = occa::kArgInfo::none;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaUShort(unsigned short value) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_USHORT);
-  type->value().size         = sizeof(unsigned short);
-  type->value().data.ushort_ = value;
-  type->value().info         = occa::kArgInfo::none;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_USHORT));
+  type.value.size         = sizeof(unsigned short);
+  type.value.data.ushort_ = value;
+  type.value.info         = occa::kArgInfo::none;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaLong(long value) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_LONG);
-  type->value().size       = sizeof(long);
-  type->value().data.long_ = value;
-  type->value().info       = occa::kArgInfo::none;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_LONG));
+  type.value.size       = sizeof(long);
+  type.value.data.long_ = value;
+  type.value.info       = occa::kArgInfo::none;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaULong(unsigned long value) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_ULONG);
-  type->value().size            = sizeof(unsigned long);
-  type->value().data.uintptr_t_ = value;
-  type->value().info            = occa::kArgInfo::none;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_ULONG));
+  type.value.size            = sizeof(unsigned long);
+  type.value.data.uintptr_t_ = value;
+  type.value.info            = occa::kArgInfo::none;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaFloat(float value) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_FLOAT);
-  type->value().size        = sizeof(float);
-  type->value().data.float_ = value;
-  type->value().info        = occa::kArgInfo::none;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_FLOAT));
+  type.value.size        = sizeof(float);
+  type.value.data.float_ = value;
+  type.value.info        = occa::kArgInfo::none;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaDouble(double value) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_DOUBLE);
-  type->value().size         = sizeof(double);
-  type->value().data.double_ = value;
-  type->value().info         = occa::kArgInfo::none;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_DOUBLE));
+  type.value.size         = sizeof(double);
+  type.value.data.double_ = value;
+  type.value.info         = occa::kArgInfo::none;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaStruct(void *value, uintptr_t bytes) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_STRUCT);
-  type->value().size       = bytes;
-  type->value().data.void_ = value;
-  type->value().info       = occa::kArgInfo::usePointer;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_STRUCT));
+  type.value.size       = bytes;
+  type.value.data.void_ = value;
+  type.value.info       = occa::kArgInfo::usePointer;
+  return occa::c::wrapType(type);
 }
 
 occaType OCCA_RFUNC occaString(const char *value) {
-  occaType type = (occaType) new occaTypePtr_t(OCCA_TYPE_STRING);
-  type->value().size       = sizeof(char*);
-  type->value().data.void_ = const_cast<char*>(value);
-  type->value().info       = occa::kArgInfo::usePointer;
-  return type;
+  occaType_t &type = *(new occaType_t(OCCA_TYPE_STRING));
+  type.value.size       = sizeof(char*);
+  type.value.data.void_ = const_cast<char*>(value);
+  type.value.info       = occa::kArgInfo::usePointer;
+  return occa::c::wrapType(type);
 }
 //====================================
 
@@ -382,7 +357,9 @@ occaKernel OCCA_RFUNC occaBuildKernelFromBinary(const char *filename,
 
 //  |---[ Memory ]--------------------
 void OCCA_RFUNC occaMemorySwap(occaMemory a, occaMemory b) {
-  a->swap(b);
+  occaType_t *a_ptr = a.ptr;
+  a.ptr = b.ptr;
+  b.ptr = a_ptr;
 }
 
 occaMemory OCCA_RFUNC occaWrapMemory(void *handle_,
@@ -390,9 +367,9 @@ occaMemory OCCA_RFUNC occaWrapMemory(void *handle_,
 
   occa::memory memory_ = occa::wrapMemory(handle_, bytes);
 
-  occaMemory memory = (occaMemory) new occaTypePtr_t(OCCA_TYPE_MEMORY);
-  memory->value().data.void_ = memory_.getMHandle();
-  return memory;
+  occaType_t &memory = *(new occaType_t(OCCA_TYPE_MEMORY));
+  memory.value.data.void_ = memory_.getMHandle();
+  return occa::c::wrapMemory(memory);
 }
 
 void OCCA_RFUNC occaWrapManagedMemory(void *handle_,
@@ -404,10 +381,10 @@ occaMemory OCCA_RFUNC occaMalloc(const uintptr_t bytes,
                                  void *src) {
   occa::memory memory_ = occa::malloc(bytes, src);
 
-  occaMemory memory = (occaMemory) new occaTypePtr_t();
-  memory->type()             = OCCA_TYPE_MEMORY;
-  memory->value().data.void_ = memory_.getMHandle();
-  return memory;
+  occaType_t &memory = *(new occaType_t());
+  memory.type             = OCCA_TYPE_MEMORY;
+  memory.value.data.void_ = memory_.getMHandle();
+  return occa::c::wrapMemory(memory);
 }
 
 void* OCCA_RFUNC occaManagedAlloc(const uintptr_t bytes,
@@ -421,10 +398,10 @@ occaMemory OCCA_RFUNC occaMappedAlloc(const uintptr_t bytes,
 
   occa::memory memory_ = occa::mappedAlloc(bytes, src);
 
-  occaMemory memory = (occaMemory) new occaTypePtr_t();
-  memory->type()             = OCCA_TYPE_MEMORY;
-  memory->value().data.void_ = memory_.getMHandle();
-  return memory;
+  occaType_t &memory = *(new occaType_t());
+  memory.type             = OCCA_TYPE_MEMORY;
+  memory.value.data.void_ = memory_.getMHandle();
+  return occa::c::wrapMemory(memory);
 }
 
 void* OCCA_RFUNC occaManagedMappedAlloc(const uintptr_t bytes,
@@ -462,9 +439,9 @@ void OCCA_RFUNC occaDeviceInfoAppendType(occaDeviceInfo info,
 
   occa::deviceInfo &info_ = *((occa::deviceInfo*) info);
 
-  info_.append(key, occa::typeToStr(value));
+  info_.append(key, occa::c::typeToStr(value));
 
-  delete value;
+  delete value.ptr;
 }
 
 void OCCA_RFUNC occaDeviceInfoFree(occaDeviceInfo info) {
@@ -639,10 +616,10 @@ occaMemory OCCA_RFUNC occaDeviceMalloc(occaDevice device,
   occa::device device_((occa::device_v*) device);
   occa::memory memory_ = device_.malloc(bytes, src);
 
-  occaMemory memory = (occaMemory) new occaTypePtr_t();
-  memory->type()             = OCCA_TYPE_MEMORY;
-  memory->value().data.void_ = memory_.getMHandle();
-  return memory;
+  occaType_t &memory = *(new occaType_t());
+  memory.type             = OCCA_TYPE_MEMORY;
+  memory.value.data.void_ = memory_.getMHandle();
+  return occa::c::wrapMemory(memory);
 }
 
 void* OCCA_RFUNC occaDeviceManagedAlloc(occaDevice device,
@@ -661,10 +638,10 @@ occaMemory OCCA_RFUNC occaDeviceMappedAlloc(occaDevice device,
   occa::device device_((occa::device_v*) device);
   occa::memory memory_ = device_.mappedAlloc(bytes, src);
 
-  occaMemory memory = (occaMemory) new occaTypePtr_t();
-  memory->type()             = OCCA_TYPE_MEMORY;
-  memory->value().data.void_ = memory_.getMHandle();
-  return memory;
+  occaType_t &memory = *(new occaType_t());
+  memory.type             = OCCA_TYPE_MEMORY;
+  memory.value.data.void_ = memory_.getMHandle();
+  return occa::c::wrapMemory(memory);
 }
 
 void* OCCA_RFUNC occaDeviceManagedMappedAlloc(occaDevice device,
@@ -858,7 +835,7 @@ void OCCA_RFUNC occaArgumentListFree(occaArgumentList list) {
 
 void OCCA_RFUNC occaArgumentListAddArg(occaArgumentList list,
                                        int argPos,
-                                       void *type) {
+                                       occaType type) {
 
   occaArgumentList_t &list_ = *list;
 
@@ -870,7 +847,7 @@ void OCCA_RFUNC occaArgumentListAddArg(occaArgumentList list,
     list_.argc = (argPos + 1);
   }
 
-  list_.argv[argPos] = (occaType_t*) type;
+  list_.argv[argPos] = type.ptr;
 }
 
 // Note the _
@@ -927,9 +904,9 @@ void OCCA_RFUNC occaKernelInfoAddDefine(occaKernelInfo info,
 
   occa::kernelInfo &info_ = *((occa::kernelInfo*) info);
 
-  info_.addDefine(macro, occa::typeToStr(value));
+  info_.addDefine(macro, occa::c::typeToStr(value));
 
-  delete value;
+  delete value.ptr;
 }
 
 void OCCA_RFUNC occaKernelInfoAddInclude(occaKernelInfo info,
@@ -1000,35 +977,35 @@ occaMemory OCCA_RFUNC occaDeviceWrapMemory(occaDevice device,
   occa::device device_((occa::device_v*) device);
   occa::memory memory_ = device_.wrapMemory(handle_, bytes);
 
-  occaMemory memory = (occaMemory) new occaTypePtr_t();
-  memory->type()             = OCCA_TYPE_MEMORY;
-  memory->value().data.void_ = memory_.getMHandle();
-  return memory;
+  occaType_t &memory = *(new occaType_t());
+  memory.type             = OCCA_TYPE_MEMORY;
+  memory.value.data.void_ = memory_.getMHandle();
+  return occa::c::wrapMemory(memory);
 }
 //====================================
 
 
 //---[ Memory ]-----------------------
 const char* OCCA_RFUNC occaMemoryMode(occaMemory memory) {
-  occa::memory memory_((occa::memory_v*) memory->value().data.void_);
+  occa::memory memory_((occa::memory_v*) memory.ptr->value.data.void_);
 
   return memory_.mode().c_str();
 }
 
 void* OCCA_RFUNC occaMemoryGetMemoryHandle(occaMemory memory) {
-  occa::memory memory_((occa::memory_v*) memory->value().data.void_);
+  occa::memory memory_((occa::memory_v*) memory.ptr->value.data.void_);
 
   return memory_.getMemoryHandle();
 }
 
 void* OCCA_RFUNC occaMemoryGetMappedPointer(occaMemory memory) {
-  occa::memory memory_((occa::memory_v*) memory->value().data.void_);
+  occa::memory memory_((occa::memory_v*) memory.ptr->value.data.void_);
 
   return memory_.getMappedPointer();
 }
 
 void* OCCA_RFUNC occaMemoryGetTextureHandle(occaMemory memory) {
-  occa::memory memory_((occa::memory_v*) memory->value().data.void_);
+  occa::memory memory_((occa::memory_v*) memory.ptr->value.data.void_);
 
   return memory_.getTextureHandle();
 }
@@ -1050,8 +1027,8 @@ void OCCA_RFUNC occaCopyMemToMem(occaMemory dest, occaMemory src,
                                  const uintptr_t destOffset,
                                  const uintptr_t srcOffset) {
 
-  occa::memory src_((occa::memory_v*) src->value().data.void_);
-  occa::memory dest_((occa::memory_v*) dest->value().data.void_);
+  occa::memory src_((occa::memory_v*) src.ptr->value.data.void_);
+  occa::memory dest_((occa::memory_v*) dest.ptr->value.data.void_);
 
   memcpy(dest_, src_, bytes, destOffset, srcOffset);
 }
@@ -1060,7 +1037,7 @@ void OCCA_RFUNC occaCopyPtrToMem(occaMemory dest, const void *src,
                                  const uintptr_t bytes,
                                  const uintptr_t offset) {
 
-  occa::memory dest_((occa::memory_v*) dest->value().data.void_);
+  occa::memory dest_((occa::memory_v*) dest.ptr->value.data.void_);
 
   memcpy(dest_, src, bytes, offset);
 }
@@ -1069,7 +1046,7 @@ void OCCA_RFUNC occaCopyMemToPtr(void *dest, occaMemory src,
                                  const uintptr_t bytes,
                                  const uintptr_t offset) {
 
-  occa::memory src_((occa::memory_v*) src->value().data.void_);
+  occa::memory src_((occa::memory_v*) src.ptr->value.data.void_);
 
   memcpy(dest, src_, bytes, offset);
 }
@@ -1079,8 +1056,8 @@ void OCCA_RFUNC occaAsyncCopyMemToMem(occaMemory dest, occaMemory src,
                                       const uintptr_t destOffset,
                                       const uintptr_t srcOffset) {
 
-  occa::memory src_((occa::memory_v*) src->value().data.void_);
-  occa::memory dest_((occa::memory_v*) dest->value().data.void_);
+  occa::memory src_((occa::memory_v*) src.ptr->value.data.void_);
+  occa::memory dest_((occa::memory_v*) dest.ptr->value.data.void_);
 
   asyncMemcpy(dest_, src_, bytes, destOffset, srcOffset);
 }
@@ -1089,7 +1066,7 @@ void OCCA_RFUNC occaAsyncCopyPtrToMem(occaMemory dest, const void * src,
                                       const uintptr_t bytes,
                                       const uintptr_t offset) {
 
-  occa::memory dest_((occa::memory_v*) dest->value().data.void_);
+  occa::memory dest_((occa::memory_v*) dest.ptr->value.data.void_);
 
   asyncMemcpy(dest_, src, bytes, offset);
 }
@@ -1098,15 +1075,15 @@ void OCCA_RFUNC occaAsyncCopyMemToPtr(void *dest, occaMemory src,
                                       const uintptr_t bytes,
                                       const uintptr_t offset) {
 
-  occa::memory src_((occa::memory_v*) src->value().data.void_);
+  occa::memory src_((occa::memory_v*) src.ptr->value.data.void_);
 
   asyncMemcpy(dest, src_, bytes, offset);
 }
 
 void OCCA_RFUNC occaMemoryFree(occaMemory memory) {
-  occa::memory memory_((occa::memory_v*) memory->value().data.void_);
+  occa::memory memory_((occa::memory_v*) memory.ptr->value.data.void_);
   memory_.free();
-  delete memory;
+  delete memory.ptr;
 }
 //====================================
 
