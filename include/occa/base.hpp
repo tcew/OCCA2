@@ -1,26 +1,6 @@
 #ifndef OCCA_BASE_HEADER
 #define OCCA_BASE_HEADER
 
-// #include <algorithm>
-// #include <iomanip>
-// #include <sstream>
-// #include <fstream>
-
-// #include <string.h>
-// #include <stdio.h>
-// #include <fcntl.h>
-
-// #include <sys/stat.h>
-// #include <sys/types.h>
-
-// #if (OCCA_OS & (LINUX_OS | OSX_OS))
-// #  include <unistd.h>
-// #else
-// #  include <io.h>
-// #endif
-
-// #include "occa/tools.hpp"
-
 #include <iostream>
 #include <vector>
 #include <map>
