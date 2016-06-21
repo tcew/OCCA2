@@ -1,5 +1,7 @@
 #if OCCA_CUDA_ENABLED
 #include "occa/ACC.hpp"
+#define accDevice acc_device_nvidia
+
 
 namespace occa {
   //---[ Helper Functions ]-----------
@@ -10,31 +12,32 @@ namespace occa {
       if(isInitialized)
         return;
 
-      acc_init(acc_device_nvidia);
+      acc_init(accDevice);
 
       isInitialized = true;
     }
 
     int getDeviceCount(){
       int deviceCount;
-       OCCA_ACC_CHECK("Finding Number of Devices",
-                      acc_get_num_devices( acc_device_nvidia ));
-       return deviceCount = acc_get_num_devices( acc_device_nvidia );
-    }
+      OCCA_ACC_CHECK("Finding Number of Devices");
 
+      return deviceCount = acc_get_num_devices( accDevice );
+    }
+    
     ACCdevice getDevice(const int id){
-      ACCdevice device;
+       
+      CUdevice device;
       OCCA_ACC_CHECK("Getting ACCdevice",
-                     acc_set_device_num( id, acc_device_nvidia ));
+		     acc_get_current_cuda_device(&device));
       return device;
     }
-
-    uintptr_t getDeviceMemorySize(CUdevice device){
+    
+    /* uintptr_t getDeviceMemorySize(CUdevice device){
       size_t bytes;
       OCCA_ACC_CHECK("Finding available memory on device",
                       cuDeviceTotalMem(&bytes, device));
       return bytes;
-    }
+      }*/
 
     std::string getDeviceListInfo(){
       std::stringstream ss;
@@ -72,7 +75,7 @@ namespace occa {
       return ss.str();
     }
 
-    void enablePeerToPeer(CUcontext context){
+    /* void enablePeerToPeer(CUcontext context){
 #if ACC_VERSION >= 4000
       OCCA_ACC_CHECK("Enabling Peer-to-Peer",
                       cuCtxEnablePeerAccess(context, 0) );
@@ -171,7 +174,7 @@ namespace occa {
                  << ((int) ((ACC_VERSION % 100) / 10))
                  << "] does not support Peer-to-Peer");
 #endif
-    }
+}*/
 
     occa::device wrapDevice(CUdevice device, CUcontext context){
       occa::device dev;
@@ -1019,6 +1022,7 @@ namespace occa {
     OCCA_EXTRACT_DATA(ACC, Device);
 
     data_.p2pEnabled = false;
+
 
     OCCA_CHECK(aim.has("deviceID"),
                "[ACC] device not given [deviceID]");
