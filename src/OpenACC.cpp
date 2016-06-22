@@ -74,9 +74,15 @@ namespace occa {
 
       return ss.str();
     }
+  
+     void enablePeerToPeer(CUcontext context){
+       // To be implimented
 
-    /* void enablePeerToPeer(CUcontext context){
-#if ACC_VERSION >= 4000
+       perror("peer to peer not yet implimented");
+
+
+
+       /*#if ACC_VERSION >= 4000
       OCCA_ACC_CHECK("Enabling Peer-to-Peer",
                       cuCtxEnablePeerAccess(context, 0) );
 #else
@@ -173,11 +179,15 @@ namespace occa {
                  << '.'
                  << ((int) ((ACC_VERSION % 100) / 10))
                  << "] does not support Peer-to-Peer");
-#endif
-}*/
+		 #endif */
+}
 
     occa::device wrapDevice(CUdevice device, CUcontext context){
-      occa::device dev;
+     
+
+      perror("wrap device not yet impimented for OpenACC");
+
+      /* occa::device dev;
       device_t<ACC> &dHandle   = *(new device_t<ACC>());
       ACCDeviceData_t &devData = *(new ACCDeviceData_t);
 
@@ -196,7 +206,7 @@ namespace occa {
 
       dHandle.currentStream = dHandle.createStream();
 
-      return dev;
+      return dev; */
     }
   }
 
