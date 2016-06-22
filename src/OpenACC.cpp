@@ -1,5 +1,5 @@
 #if OCCA_CUDA_ENABLED
-#include "occa/ACC.hpp"
+#include "occa/OpenACC.hpp"
 #define accDevice acc_device_nvidia
 
 
@@ -47,12 +47,12 @@ namespace occa {
       if(deviceCount == 0)
         return "";
 
-      char deviceName[1024];
-      OCCA_ACC_CHECK("Getting Device Name",
-                      cuDeviceGetName(deviceName, 1024, 0));
+      //      char deviceName[1024];
+      // OCCA_ACC_CHECK("Getting Device Name",
+      //              cuDeviceGetName(deviceName, 1024, 0));
 
-      uintptr_t bytes      = getDeviceMemorySize(getDevice(0));
-      std::string bytesStr = stringifyBytes(bytes);
+      // uintptr_t bytes      = getDeviceMemorySize(getDevice(0));
+      // std::string bytesStr = stringifyBytes(bytes);
 
       // << "==============o=======================o==========================================\n";
       ss << "     ACC     |  Device ID            | 0 "                                  << '\n'
@@ -60,11 +60,11 @@ namespace occa {
          << "              |  Memory               | " << bytesStr                        << '\n';
 
       for(int i = 1; i < deviceCount; ++i){
-        bytes    = getDeviceMemorySize(getDevice(i));
-        bytesStr = stringifyBytes(bytes);
+	// bytes    = getDeviceMemorySize(getDevice(i));
+	// bytesStr = stringifyBytes(bytes);
 
-        OCCA_ACC_CHECK("Getting Device Name",
-                        cuDeviceGetName(deviceName, 1024, i));
+	// OCCA_ACC_CHECK("Getting Device Name",
+	//              cuDeviceGetName(deviceName, 1024, i));
 
         ss << "              |-----------------------+------------------------------------------\n"
            << "              |  Device ID            | " << i                                << '\n'
@@ -210,19 +210,19 @@ namespace occa {
     }
   }
 
-  const CUarray_format accFormats[8] = {CU_AD_FORMAT_UNSIGNED_INT8,
+  /* const CUarray_format accFormats[8] = {CU_AD_FORMAT_UNSIGNED_INT8,
                                          CU_AD_FORMAT_UNSIGNED_INT16,
                                          CU_AD_FORMAT_UNSIGNED_INT32,
                                          CU_AD_FORMAT_SIGNED_INT8,
                                          CU_AD_FORMAT_SIGNED_INT16,
                                          CU_AD_FORMAT_SIGNED_INT32,
                                          CU_AD_FORMAT_HALF,
-                                         CU_AD_FORMAT_FLOAT};
+                                         CU_AD_FORMAT_FLOAT};*/
 
   template <>
   void* formatType::format<occa::ACC>() const {
     return ((void*) &(accFormats[format_]));
-  }
+    }
 
   const int ACC_ADDRESS_NONE  = 0; // accBoundaryModeNone
   const int ACC_ADDRESS_CLAMP = 1; // accBoundaryModeClamp
