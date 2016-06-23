@@ -178,12 +178,12 @@ namespace occa {
   }
 
   template <>
-  kernel_t<ACC>::kernel_t(const kernel_t<ACC> &k){
+  kernel_t<OpenACC>::kernel_t(const kernel_t<OpenACC> &k){
     *this = k;
   }
 
   template <>
-  kernel_t<ACC>& kernel_t<ACC>::operator = (const kernel_t<ACC> &k){
+  kernel_t<OpenACC>& kernel_t<OpenACC>::operator = (const kernel_t<OpenACC> &k){
     data    = k.data;
     dHandle = k.dHandle;
 
@@ -201,18 +201,18 @@ namespace occa {
   }
 
   template <>
-  kernel_t<ACC>::~kernel_t(){}
+  kernel_t<OpenACC>::~kernel_t(){}
 
   template <>
-  void* kernel_t<ACC>::getKernelHandle(){
-    OCCA_EXTRACT_DATA(ACC, Kernel);
+  void* kernel_t<OpenACC>::getKernelHandle(){
+    OCCA_EXTRACT_DATA(OpenACC, Kernel);
 
     return data_.function;
   }
 
   template <>
-  void* kernel_t<ACC>::getProgramHandle(){
-    OCCA_EXTRACT_DATA(ACC, Kernel);
+  void* kernel_t<OpenACC>::getProgramHandle(){
+    OCCA_EXTRACT_DATA(OpenACC, Kernel);
 
     return data_.module;
   }
