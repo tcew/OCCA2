@@ -40,6 +40,8 @@ namespace occa {
       }*/
 
     std::string getDeviceListInfo(){
+
+#if 0
       std::stringstream ss;
 
       acc::init();
@@ -73,80 +75,10 @@ namespace occa {
       }
 
       return ss.str();
+#endif
+      return "Not implimenterd";
     }
   
-     void enablePeerToPeer(CUcontext context){
-       // To be implimented
-
-       perror("peer to peer not yet implimented");
-
-
-
-       /*#if ACC_VERSION >= 4000
-      OCCA_ACC_CHECK("Enabling Peer-to-Peer",
-                      cuCtxEnablePeerAccess(context, 0) );
-#else
-      OCCA_CHECK(false,
-                 "ACC version ["
-                 << ((int) (ACC_VERSION / 1000))
-                 << '.'
-                 << ((int) ((ACC_VERSION % 100) / 10))
-                 << "] does not support Peer-to-Peer");
-#endif
-    }
-
-    void checkPeerToPeer(CUdevice destDevice,
-                         CUdevice srcDevice){
-#if ACC_VERSION >= 4000
-        int canAccessPeer;
-
-        OCCA_ACC_CHECK("Checking Peer-to-Peer Connection",
-                        cuDeviceCanAccessPeer(&canAccessPeer,
-                                              destDevice,
-                                              srcDevice));
-
-        OCCA_CHECK((canAccessPeer == 1),
-                   "Checking Peer-to-Peer Connection");
-#else
-      OCCA_CHECK(false,
-                 "ACC version ["
-                 << ((int) (ACC_VERSION / 1000))
-                 << '.'
-                 << ((int) ((ACC_VERSION % 100) / 10))
-                 << "] does not support Peer-to-Peer");
-#endif
-    }
-
-    void peerToPeerMemcpy(CUdevice destDevice,
-                          CUcontext destContext,
-                          CUdeviceptr destMemory,
-                          CUdevice srcDevice,
-                          CUcontext srcContext,
-                          CUdeviceptr srcMemory,
-                          const uintptr_t bytes,
-                          CUstream usingStream){
-
-      peerToPeerMemcpy(destDevice, destContext, destMemory,
-                       srcDevice , srcContext , srcMemory ,
-                       bytes,
-                       usingStream, false);
-    }
-
-
-    void asyncPeerToPeerMemcpy(CUdevice destDevice,
-                               CUcontext destContext,
-                               CUdeviceptr destMemory,
-                               CUdevice srcDevice,
-                               CUcontext srcContext,
-                               CUdeviceptr srcMemory,
-                               const uintptr_t bytes,
-                               CUstream usingStream){
-
-      peerToPeerMemcpy(destDevice, destContext, destMemory,
-                       srcDevice , srcContext , srcMemory ,
-                       bytes,
-                       usingStream, true);
-    }
 
     void peerToPeerMemcpy(CUdevice destDevice,
                           CUcontext destContext,
@@ -180,10 +112,10 @@ namespace occa {
                  << ((int) ((ACC_VERSION % 100) / 10))
                  << "] does not support Peer-to-Peer");
 		 #endif */
-}
+} 
 
     occa::device wrapDevice(CUdevice device, CUcontext context){
-     
+
 
       perror("wrap device not yet impimented for OpenACC");
 
@@ -286,31 +218,30 @@ namespace occa {
   }
 
   template <>
-  std::string kernel_t<ACC>::fixBinaryName(const std::string &filename){
+  std::string kernel_t<OpenACC>::fixBinaryName(const std::string &filename){
     return filename;
   }
 
+  /* BUILD FROM SOURCE ------------------ */
   template <>
-  kernel_t<ACC>* kernel_t<ACC>::buildFromSource(const std::string &filename,
-                                                  const std::string &functionName,
-                                                  const kernelInfo &info_){
-
+  kernel_t<OpenACC>* kernel_t<OpenACC>::buildFromSource(const std::string &filename,
+							const std::string &functionName,
+							const kernelInfo &info_){
+    
     name = functionName;
-
-    OCCA_EXTRACT_DATA(ACC, Kernel);
+    
     kernelInfo info = info_;
-
+    
     dHandle->addOccaHeadersToInfo(info);
 
     const std::string hash = getFileContentHash(filename,
                                                 dHandle->getInfoSalt(info));
-
-    const std::string hashDir       = hashDirFor(filename, hash);
-    const std::string sourceFile    = hashDir + kc::sourceFile;
-    const std::string binaryFile    = hashDir + fixBinaryName(kc::binaryFile);
-    const std::string ptxBinaryFile = hashDir + "ptxBinary.o";
+    
+    const std::string hashDir    = hashDirFor(filename, hash);
+    const std::string sourceFile = hashDir + kc::sourceFile;
+    const std::string binaryFile = hashDir + fixBinaryName(kc::binaryFile);
     bool foundBinary = true;
-
+    
     if (!haveHash(hash, 0))
       waitForHash(hash, 0);
     else if (sys::fileExists(binaryFile))
@@ -320,203 +251,161 @@ namespace occa {
 
     if (foundBinary) {
       if(verboseCompilation_f)
-        std::cout << "Found cached binary of [" << compressFilename(filename) << "] in [" << compressFilename(binaryFile) << "]\n";
+	std::cout << "Found cached binary of [" << compressFilename(filename) << "] in\
+ [" << compressFilename(binaryFile) << "]\n";
 
       return buildFromBinary(binaryFile, functionName);
     }
 
+    data = new OpenACCKernelData_t;
+
     createSourceFileFrom(filename, hashDir, info);
-
-    std::string archSM = "";
-
-    if((dHandle->compilerFlags.find("-arch=sm_") == std::string::npos) &&
-       (            info.flags.find("-arch=sm_") == std::string::npos)){
-
-      std::stringstream archSM_;
-
-      int major, minor;
-      OCCA_ACC_CHECK("Kernel (" + functionName + ") : Getting ACC Device Arch",
-                      cuDeviceComputeCapability(&major, &minor, data_.device) );
-
-      archSM_ << " -arch=sm_" << major << minor << ' ';
-
-      archSM = archSM_.str();
-    }
 
     std::stringstream command;
 
-    if(verboseCompilation_f)
-      std::cout << "Compiling [" << functionName << "]\n";
-
-#if 0
-    //---[ PTX Check Command ]----------
     if(dHandle->compilerEnvScript.size())
       command << dHandle->compilerEnvScript << " && ";
 
+    //---[ Check if compiler flag is added ]------                                     
+    OpenACCDeviceData_t &dData_ = *((OpenACCDeviceData_t*) dHandle->data);
+
+    const std::string accFlag = dData_.OpenACCFlag;
+
+    if((dHandle->compilerFlags.find(accFlag) == std::string::npos) &&
+       (            info.flags.find(accFlag) == std::string::npos)){
+
+      info.flags += ' ';
+      info.flags += accFlag;
+    }
+    //============================================                                     
+
+#if (OCCA_OS & (LINUX_OS | OSX_OS))
     command << dHandle->compiler
-            << " -I."
-            << " -I"  << env::OCCA_DIR << "include"
-            << ' '          << dHandle->compilerFlags
-#  if (OCCA_OS == WINDOWS_OS)
-            << " -D OCCA_OS=WINDOWS_OS -D _MSC_VER=1800"
-#  endif
-            << archSM
-            << " -Xptxas -v,-dlcm=cg"
-            << ' '          << info.flags
-            << " -x cu -c " << sourceFile
-            << " -o "       << ptxBinaryFile;
-
-    const std::string &ptxCommand = command.str();
-
-    if(verboseCompilation_f)
-      std::cout << "Compiling [" << functionName << "]\n" << ptxCommand << "\n";
-
-#  if (OCCA_OS & (LINUX_OS | OSX_OS))
-    ignoreResult( system(ptxCommand.c_str()) );
+            << ' '    << dHandle->compilerFlags
+            << ' '    << info.flags
+            << ' '    << sourceFile
+            << " -o " << binaryFile
+            << " -I"  << env::OCCA_DIR << "/include"
+            << " -L"  << env::OCCA_DIR << "/lib -locca"
+            << std::endl;
+#else
+#  if (OCCA_DEBUG_ENABLED)
+    std::string occaLib = env::OCCA_DIR + "\\lib\\libocca_d.lib ";
 #  else
-    ignoreResult( system(("\"" +  ptxCommand + "\"").c_str()) );
+    std::string occaLib = env::OCCA_DIR + "\\lib\\libocca.lib ";
 #  endif
-#endif
 
-    //---[ Compiling Command ]----------
-    command.str("");
+    std::string ptLib   = env::OCCA_DIR + "\\lib\\pthreadVC2.lib ";
 
     command << dHandle->compiler
-            << " -o "       << binaryFile
-            << " -ptx -I."
-            << " -I"  << env::OCCA_DIR << "include"
-#  if (OCCA_OS == WINDOWS_OS)
-            << " -D OCCA_OS=WINDOWS_OS -D _MSC_VER=1800"
-#  endif
-            << ' '          << dHandle->compilerFlags
-            << archSM
-            << ' '          << info.flags
-            << " -x cu "    << sourceFile;
+            << " /D MC_CL_EXE"
+            << ' '    << dHandle->compilerFlags
+            << ' '    << info.flags
+            << " /I"  << env::OCCA_DIR << "\\include"
+            << ' '    << sourceFile
+            << " /link " << occaLib << ptLib << " /OUT:" << binaryFile
+            << std::endl;
+#endif
 
     const std::string &sCommand = command.str();
 
     if(verboseCompilation_f)
-      std::cout << sCommand << '\n';
+      std::cout << "Compiling [" << functionName << "]\n" << sCommand << "\n";
 
+#if (OCCA_OS & (LINUX_OS | OSX_OS))
     const int compileError = system(sCommand.c_str());
+#else
+    const int compileError = system(("\"" +  sCommand + "\"").c_str());
+#endif
 
     if(compileError){
       releaseHash(hash, 0);
       OCCA_CHECK(false, "Compilation error");
     }
 
-    const CUresult moduleLoadError = cuModuleLoad(&data_.module,
-                                                  binaryFile.c_str());
+    OCCA_EXTRACT_DATA(OpenACC, Kernel);
 
-    if(moduleLoadError)
-      releaseHash(hash, 0);
-
-    OCCA_ACC_CHECK("Kernel (" + functionName + ") : Loading Module",
-                    moduleLoadError);
-
-    const CUresult moduleGetFunctionError = cuModuleGetFunction(&data_.function,
-                                                                data_.module,
-                                                                functionName.c_str());
-
-    if(moduleGetFunctionError)
-      releaseHash(hash, 0);
-
-    OCCA_ACC_CHECK("Kernel (" + functionName + ") : Loading Function",
-                    moduleGetFunctionError);
+    data_.dlHandle = cpu::dlopen(binaryFile, hash);
+    data_.handle   = cpu::dlsym(data_.dlHandle, functionName, hash);
 
     releaseHash(hash, 0);
 
     return this;
   }
 
+
   template <>
-  kernel_t<ACC>* kernel_t<ACC>::buildFromBinary(const std::string &filename,
-                                                 const std::string &functionName){
+  kernel_t<OpenACC>* kernel_t<OpenACC>::buildFromBinary(const std::string &filename,
+							const std::string &functionName){
 
     name = functionName;
 
-    OCCA_EXTRACT_DATA(ACC, Kernel);
+    data = new OpenACCKernelData_t;
 
-    OCCA_ACC_CHECK("Kernel (" + functionName + ") : Loading Module",
-                    cuModuleLoad(&data_.module, filename.c_str()));
+    OCCA_EXTRACT_DATA(OpenACC, Kernel);
 
-    OCCA_ACC_CHECK("Kernel (" + functionName + ") : Loading Function",
-                    cuModuleGetFunction(&data_.function, data_.module, functionName.c_str()));
-
-    return this;
-  }
-
-  template <>
-  kernel_t<ACC>* kernel_t<ACC>::loadFromLibrary(const char *cache,
-                                                  const std::string &functionName){
-    OCCA_EXTRACT_DATA(ACC, Kernel);
-
-    OCCA_ACC_CHECK("Kernel (" + functionName + ") : Loading Module",
-                    cuModuleLoadData(&data_.module, cache));
-
-    OCCA_ACC_CHECK("Kernel (" + functionName + ") : Loading Function",
-                    cuModuleGetFunction(&data_.function, data_.module, functionName.c_str()));
+    data_.dlHandle = cpu::dlopen(filename);
+    data_.handle   = cpu::dlsym(data_.dlHandle, functionName);
 
     return this;
   }
 
   template <>
-  uintptr_t kernel_t<ACC>::maximumInnerDimSize(){
-    if(maximumInnerDimSize_)
-      return maximumInnerDimSize_;
-
-    OCCA_EXTRACT_DATA(ACC, Kernel);
-
-    int maxSize;
-
-    OCCA_ACC_CHECK("Kernel: Getting Maximum Inner-Dim Size",
-                    cuFuncGetAttribute(&maxSize, CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, data_.function));
-
-    maximumInnerDimSize_ = (uintptr_t) maxSize;
-
-    return maximumInnerDimSize_;
+  kernel_t<OpenACC>* kernel_t<OpenACC>::loadFromLibrary(const char *cache,
+                                                      const std::string &functionName){
+    return buildFromBinary(cache, functionName);
   }
 
   template <>
-  int kernel_t<ACC>::preferredDimSize(){
-    preferredDimSize_ = 32;
-    return 32;
+  uintptr_t kernel_t<OpenACC>::maximumInnerDimSize(){
+    return ((uintptr_t) -1);
   }
 
+  // [-] Missing                                                                                 
   template <>
-  void kernel_t<ACC>::runFromArguments(const int kArgc, const kernelArg *kArgs){
-    ACCKernelData_t &data_ = *((ACCKernelData_t*) data);
-    CUfunction function_ = data_.function;
+  int kernel_t<OpenACC>::preferredDimSize(){
+    preferredDimSize_ = OCCA_SIMD_WIDTH;
+    return OCCA_SIMD_WIDTH;
+  }
 
-    int occaKernelInfoArgs = 0;
+
+  template <>
+  void kernel_t<OpenACC>::runFromArguments(const int kArgc, const kernelArg *kArgs){
+    OpenACCKernelData_t &data_ = *((OpenACCKernelData_t*) data);
+    handleFunction_t tmpKernel = (handleFunction_t) data_.handle;
+    int occaKernelArgs[6];
+
+    occaKernelArgs[0] = outer.z; occaKernelArgs[3] = inner.z;
+    occaKernelArgs[1] = outer.y; occaKernelArgs[4] = inner.y;
+    occaKernelArgs[2] = outer.x; occaKernelArgs[5] = inner.x;
+
     int argc = 0;
-
-    data_.vArgs = new void*[1 + kernelArg::argumentCount(kArgc, kArgs)];
-    data_.vArgs[argc++] = &occaKernelInfoArgs;
-    for(int i = 0; i < kArgc; ++i) {
+    for(int i = 0; i < kArgc; ++i){
       for(int j = 0; j < kArgs[i].argc; ++j){
         data_.vArgs[argc++] = kArgs[i].args[j].ptr();
       }
     }
 
-    OCCA_ACC_CHECK("Launching Kernel",
-                    cuLaunchKernel(function_,
-                                   outer.x, outer.y, outer.z,
-                                   inner.x, inner.y, inner.z,
-                                   0, *((CUstream*) dHandle->currentStream),
-                                   data_.vArgs, 0));
-    delete [] data_.vArgs;
+    int occaInnerId0 = 0, occaInnerId1 = 0, occaInnerId2 = 0;
+
+    cpu::runFunction(tmpKernel,
+                     occaKernelArgs,
+                     occaInnerId0, occaInnerId1, occaInnerId2,
+                     argc, data_.vArgs);
   }
+
 
   template <>
-  void kernel_t<ACC>::free(){
-    OCCA_EXTRACT_DATA(ACC, Kernel);
+  void kernel_t<OpenACC>::free(){
+    OCCA_EXTRACT_DATA(OpenACC, Kernel);
 
-    OCCA_ACC_CHECK("Kernel (" + name + ") : Unloading Module",
-                    cuModuleUnload(data_.module));
-
-    delete (ACCKernelData_t*) this->data;
+#if (OCCA_OS & (LINUX_OS | OSX_OS))
+    dlclose(data_.dlHandle);
+#else
+    FreeLibrary((HMODULE) (data_.dlHandle));
+#endif
   }
+
   //==================================
 
 
