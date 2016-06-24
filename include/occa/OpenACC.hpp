@@ -1,339 +1,286 @@
-#if OCCA_CUDA_ENABLED
-#  ifndef OCCA_CUDA_HEADER
-#  define OCCA_CUDA_HEADER
+#include "occa/defines.hpp"
+
+#if OCCA_OPENACC_ENABLED
+#  ifndef OCCA_OPENACC_HEADER
+#  define OCCA_OPENACC_HEADER
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <string.h>
+#include <fcntl.h>
 
 #include "occa/base.hpp"
 #include "occa/library.hpp"
 
-#include "occa/defines.hpp"
-
-#include <cuda.h>
+#if (OCCA_OS & (LINUX_OS | OSX_OS))
+#  include <dlfcn.h>
+#else
+#  include <windows.h>
+#endif
 
 namespace occa {
   //---[ Data Structs ]---------------
-  struct CUDAKernelData_t {
-    CUdevice   device;
-    CUcontext  context;
-    CUmodule   module;
-    CUfunction function;
+  struct OpenACCKernelData_t {
+    void *dlHandle;
+    handleFunction_t handle;
 
-    void **vArgs;
+    void *vArgs[2*OCCA_MAX_ARGS];
   };
 
-  struct CUDADeviceData_t {
-    CUdevice  device;
-    CUcontext context;
-    bool p2pEnabled;
-  };
-
-  struct CUDATextureData_t {
-    CUarray array;
-    CUsurfObject surface;
+  struct OpenACCDeviceData_t {
+    int vendor;
+    bool supportsOpenACC;
+    std::string OpenACCFlag;
   };
   //==================================
 
 
   //---[ Helper Functions ]-----------
-  namespace cuda {
-    extern bool isInitialized;
+  namespace acc {
+    extern std::string notSupported;
 
-    void init();
-
-    int getDeviceCount();
-
-    CUdevice getDevice(const int id);
-
-    uintptr_t getDeviceMemorySize(CUdevice device);
-
-    std::string getDeviceListInfo();
-
-    void enablePeerToPeer(CUcontext context);
-
-    void checkPeerToPeer(CUdevice destDevice,
-                         CUdevice srcDevice);
-
-    void peerToPeerMemcpy(CUdevice destDevice,
-                          CUcontext destContext,
-                          CUdeviceptr destMemory,
-                          CUdevice srcDevice,
-                          CUcontext srcContext,
-                          CUdeviceptr srcMemory,
-                          const uintptr_t bytes,
-                          CUstream usingStream);
-
-
-    void asyncPeerToPeerMemcpy(CUdevice destDevice,
-                               CUcontext destContext,
-                               CUdeviceptr destMemory,
-                               CUdevice srcDevice,
-                               CUcontext srcContext,
-                               CUdeviceptr srcMemory,
-                               const uintptr_t bytes,
-                               CUstream usingStream);
-
-    void peerToPeerMemcpy(CUdevice destDevice,
-                          CUcontext destContext,
-                          CUdeviceptr destMemory,
-                          CUdevice srcDevice,
-                          CUcontext srcContext,
-                          CUdeviceptr srcMemory,
-                          const uintptr_t bytes,
-                          CUstream usingStream,
-                          const bool isAsync);
+    std::string baseCompilerFlag(const int vendor_);
+    std::string compilerFlag(const int vendor_,
+                             const std::string &compiler);
   }
-
-  extern const CUarray_format cudaFormats[8];
-
-  template <>
-  void* formatType::format<occa::CUDA>() const;
-
-  extern const int CUDA_ADDRESS_NONE;
-  extern const int CUDA_ADDRESS_CLAMP;
   //==================================
 
 
   //---[ Kernel ]---------------------
   template <>
-  kernel_t<CUDA>::kernel_t();
+  kernel_t<OpenACC>::kernel_t();
 
   template <>
-  kernel_t<CUDA>::kernel_t(const kernel_t &k);
+  kernel_t<OpenACC>::kernel_t(const kernel_t &k);
 
   template <>
-  kernel_t<CUDA>& kernel_t<CUDA>::operator = (const kernel_t<CUDA> &k);
+  kernel_t<OpenACC>& kernel_t<OpenACC>::operator = (const kernel_t<OpenACC> &k);
 
   template <>
-  kernel_t<CUDA>::kernel_t(const kernel_t<CUDA> &k);
+  kernel_t<OpenACC>::kernel_t(const kernel_t<OpenACC> &k);
 
   template <>
-  void* kernel_t<CUDA>::getKernelHandle();
+  void* kernel_t<OpenACC>::getKernelHandle();
 
   template <>
-  void* kernel_t<CUDA>::getProgramHandle();
+  std::string kernel_t<OpenACC>::fixBinaryName(const std::string &filename);
 
   template <>
-  std::string kernel_t<CUDA>::fixBinaryName(const std::string &filename);
+  kernel_t<OpenACC>* kernel_t<OpenACC>::buildFromSource(const std::string &filename,
+                                                      const std::string &functionName,
+                                                      const kernelInfo &info_);
 
   template <>
-  kernel_t<CUDA>* kernel_t<CUDA>::buildFromSource(const std::string &filename,
-                                                  const std::string &functionName,
-                                                  const kernelInfo &info_);
+  kernel_t<OpenACC>* kernel_t<OpenACC>::buildFromBinary(const std::string &filename,
+                                                      const std::string &functionName);
 
   template <>
-  kernel_t<CUDA>* kernel_t<CUDA>::buildFromBinary(const std::string &filename,
-                                                  const std::string &functionName);
+  kernel_t<OpenMP>* kernel_t<OpenACC>::loadFromLibrary(const char *cache,
+                                                      const std::string &functionName);
 
   template <>
-  kernel_t<CUDA>* kernel_t<CUDA>::loadFromLibrary(const char *cache,
-                                                  const std::string &functionName);
+  uintptr_t kernel_t<OpenACC>::maximumInnerDimSize();
 
   template <>
-  uintptr_t kernel_t<CUDA>::maximumInnerDimSize();
+  int kernel_t<OpenACC>::preferredDimSize();
 
   template <>
-  int kernel_t<CUDA>::preferredDimSize();
+  void kernel_t<OpenACC>::runFromArguments(const int kArgc, const kernelArg *kArgs);
 
   template <>
-  void kernel_t<CUDA>::runFromArguments(const int kArgc, const kernelArg *kArgs);
-
-  template <>
-  void kernel_t<CUDA>::free();
+  void kernel_t<OpenACC>::free();
   //==================================
 
 
   //---[ Memory ]---------------------
   template <>
-  memory_t<CUDA>::memory_t();
+  memory_t<OpenACC>::memory_t();
 
   template <>
-  memory_t<CUDA>::memory_t(const memory_t &m);
+  memory_t<OpenACC>::memory_t(const memory_t &m);
 
   template <>
-  memory_t<CUDA>& memory_t<CUDA>::operator = (const memory_t &m);
+  memory_t<OpenACC>& memory_t<OpenACC>::operator = (const memory_t &m);
 
   template <>
-  void* memory_t<CUDA>::getMemoryHandle();
+  void* memory_t<OpenACC>::getMemoryHandle();
 
   template <>
-  void* memory_t<CUDA>::getTextureHandle();
+  void* memory_t<OpenACC>::getTextureHandle();
 
   template <>
-  void memory_t<CUDA>::copyFrom(const void *src,
+  void memory_t<OpenACC>::copyFrom(const void *src,
+                                  const uintptr_t bytes,
+                                  const uintptr_t offset);
+
+  template <>
+  void memory_t<OpenACC>::copyFrom(const memory_v *src,
+                                  const uintptr_t bytes,
+                                  const uintptr_t destOffset,
+                                  const uintptr_t srcOffset);
+
+  template <>
+  void memory_t<OpenACC>::copyTo(void *dest,
                                 const uintptr_t bytes,
+                                const uintptr_t destOffset);
+
+  template <>
+  void memory_t<OpenACC>::copyTo(memory_v *dest,
+                                const uintptr_t bytes,
+                                const uintptr_t srcOffset,
                                 const uintptr_t offset);
 
   template <>
-  void memory_t<CUDA>::copyFrom(const memory_v *src,
-                                const uintptr_t bytes,
-                                const uintptr_t destOffset,
-                                const uintptr_t srcOffset);
+  void memory_t<OpenACC>::asyncCopyFrom(const void *src,
+                                       const uintptr_t bytes,
+                                       const uintptr_t destOffset);
 
   template <>
-  void memory_t<CUDA>::copyTo(void *dest,
-                              const uintptr_t bytes,
-                              const uintptr_t offset);
+  void memory_t<OpenACC>::asyncCopyFrom(const memory_v *src,
+                                       const uintptr_t bytes,
+                                       const uintptr_t srcOffset,
+                                       const uintptr_t offset);
 
   template <>
-  void memory_t<CUDA>::copyTo(memory_v *dest,
-                              const uintptr_t bytes,
-                              const uintptr_t destOffset,
-                              const uintptr_t srcOffset);
-
-  template <>
-  void memory_t<CUDA>::asyncCopyFrom(const void *src,
+  void memory_t<OpenACC>::asyncCopyTo(void *dest,
                                      const uintptr_t bytes,
                                      const uintptr_t offset);
 
   template <>
-  void memory_t<CUDA>::asyncCopyFrom(const memory_v *src,
+  void memory_t<OpenACC>::asyncCopyTo(memory_v *dest,
                                      const uintptr_t bytes,
                                      const uintptr_t destOffset,
                                      const uintptr_t srcOffset);
 
   template <>
-  void memory_t<CUDA>::asyncCopyTo(void *dest,
-                                   const uintptr_t bytes,
-                                   const uintptr_t offset);
+  void memory_t<OpenACC>::mappedFree();
 
   template <>
-  void memory_t<CUDA>::asyncCopyTo(memory_v *dest,
-                                   const uintptr_t bytes,
-                                   const uintptr_t destOffset,
-                                   const uintptr_t srcOffset);
+  void memory_t<OpenACC>::mappedDetach();
 
   template <>
-  void memory_t<CUDA>::mappedFree();
+  void memory_t<OpenACC>::free();
 
   template <>
-  void memory_t<CUDA>::mappedDetach();
-
-  template <>
-  void memory_t<CUDA>::free();
-
-  template <>
-  void memory_t<CUDA>::detach();
+  void memory_t<OpenACC>::detach();
   //==================================
 
 
   //---[ Device ]---------------------
   template <>
-  device_t<CUDA>::device_t();
+  device_t<OpenACC>::device_t();
 
   template <>
-  device_t<CUDA>::device_t(const device_t<CUDA> &k);
+  device_t<OpenACC>::device_t(const device_t<OpenACC> &k);
 
   template <>
-  device_t<CUDA>& device_t<CUDA>::operator = (const device_t<CUDA> &k);
+  device_t<OpenACC>& device_t<OpenACC>::operator = (const device_t<OpenACC> &k);
 
   template <>
-  void* device_t<CUDA>::getContextHandle();
+  void* device_t<OpenACC>::getContextHandle();
 
   template <>
-  void device_t<CUDA>::setup(argInfoMap &aim);
+  void device_t<OpenACC>::setup(argInfoMap &aim);
 
   template <>
-  void device_t<CUDA>::addOccaHeadersToInfo(kernelInfo &info_);
+  void device_t<OpenACC>::addOccaHeadersToInfo(kernelInfo &info_);
 
   template <>
-  std::string device_t<CUDA>::getInfoSalt(const kernelInfo &info_);
+  std::string device_t<OpenACC>::getInfoSalt(const kernelInfo &info_);
 
   template <>
-  deviceIdentifier device_t<CUDA>::getIdentifier() const;
+  deviceIdentifier device_t<OpenACC>::getIdentifier() const;
 
   template <>
-  void device_t<CUDA>::getEnvironmentVariables();
+  void device_t<OpenACC>::getEnvironmentVariables();
 
   template <>
-  void device_t<CUDA>::appendAvailableDevices(std::vector<device> &dList);
+  void device_t<OpenACC>::appendAvailableDevices(std::vector<device> &dList);
 
   template <>
-  void device_t<CUDA>::setCompiler(const std::string &compiler_);
+  void device_t<OpenACC>::setCompiler(const std::string &compiler_);
 
   template <>
-  void device_t<CUDA>::setCompilerEnvScript(const std::string &compilerEnvScript_);
+  void device_t<OpenACC>::setCompilerEnvScript(const std::string &compilerEnvScript_);
 
   template <>
-  void device_t<CUDA>::setCompilerFlags(const std::string &compilerFlags_);
+  void device_t<OpenACC>::setCompilerFlags(const std::string &compilerFlags_);
 
   template <>
-  void device_t<CUDA>::flush();
+  void device_t<OpenACC>::flush();
 
   template <>
-  void device_t<CUDA>::finish();
+  void device_t<OpenACC>::finish();
 
   template <>
-  void device_t<CUDA>::waitFor(streamTag tag);
+  void device_t<OpenACC>::waitFor(streamTag tag);
 
   template <>
-  stream_t device_t<CUDA>::createStream();
+  stream_t device_t<OpenACC>::createStream();
 
   template <>
-  void device_t<CUDA>::freeStream(stream_t s);
+  void device_t<OpenACC>::freeStream(stream_t s);
 
   template <>
-  stream_t device_t<CUDA>::wrapStream(void *handle_);
+  stream_t device_t<OpenACC>::wrapStream(void *handle_);
 
   template <>
-  streamTag device_t<CUDA>::tagStream();
+  streamTag device_t<OpenACC>::tagStream();
 
   template <>
-  double device_t<CUDA>::timeBetween(const streamTag &startTag, const streamTag &endTag);
+  double device_t<OpenACC>::timeBetween(const streamTag &startTag, const streamTag &endTag);
 
   template <>
-  std::string device_t<CUDA>::fixBinaryName(const std::string &filename);
+  std::string device_t<OpenACC>::fixBinaryName(const std::string &filename);
 
   template <>
-  kernel_v* device_t<CUDA>::buildKernelFromSource(const std::string &filename,
-                                                  const std::string &functionName,
-                                                  const kernelInfo &info_);
+  kernel_v* device_t<OpenACC>::buildKernelFromSource(const std::string &filename,
+                                                    const std::string &functionName,
+                                                    const kernelInfo &info_);
 
   template <>
-  kernel_v* device_t<CUDA>::buildKernelFromBinary(const std::string &filename,
-                                                  const std::string &functionName);
+  kernel_v* device_t<OpenACC>::buildKernelFromBinary(const std::string &filename,
+                                                    const std::string &functionName);
 
   template <>
-  void device_t<CUDA>::cacheKernelInLibrary(const std::string &filename,
-                                            const std::string &functionName,
-                                            const kernelInfo &info_);
+  void device_t<OpenACC>::cacheKernelInLibrary(const std::string &filename,
+                                              const std::string &functionName,
+                                              const kernelInfo &info_);
 
   template <>
-  kernel_v* device_t<CUDA>::loadKernelFromLibrary(const char *cache,
-                                                  const std::string &functionName);
+  kernel_v* device_t<OpenACC>::loadKernelFromLibrary(const char *cache,
+                                                    const std::string &functionName);
 
   template <>
-  memory_v* device_t<CUDA>::wrapMemory(void *handle_,
-                                       const uintptr_t bytes);
+  memory_v* device_t<OpenACC>::wrapMemory(void *handle_,
+                                         const uintptr_t bytes);
 
   template <>
-  memory_v* device_t<CUDA>::wrapTexture(void *handle_,
-                                        const int dim, const occa::dim &dims,
-                                        occa::formatType type, const int permissions);
+  memory_v* device_t<OpenACC>::wrapTexture(void *handle_,
+                                          const int dim, const occa::dim &dims,
+                                          occa::formatType type, const int permissions);
 
   template <>
-  memory_v* device_t<CUDA>::malloc(const uintptr_t bytes,
-                                   void *src);
+  memory_v* device_t<OpenACC>::malloc(const uintptr_t bytes,
+                                     void *src);
 
   template <>
-  memory_v* device_t<CUDA>::textureAlloc(const int dim, const occa::dim &dims,
-                                         void *src,
-                                         occa::formatType type, const int permissions);
+  memory_v* device_t<OpenACC>::textureAlloc(const int dim, const occa::dim &dims,
+                                           void *src,
+                                           occa::formatType type, const int permissions);
 
   template <>
-  memory_v* device_t<CUDA>::mappedAlloc(const uintptr_t bytes,
-                                        void *src);
+  memory_v* device_t<OpenACC>::mappedAlloc(const uintptr_t bytes,
+                                          void *src);
 
   template <>
-  uintptr_t device_t<CUDA>::memorySize();
+  uintptr_t device_t<OpenACC>::memorySize();
 
   template <>
-  void device_t<CUDA>::free();
+  void device_t<OpenACC>::free();
 
   template <>
-  int device_t<CUDA>::simdWidth();
-  //==================================
-
-  //---[ Error Handling ]-------------
-  std::string cudaError(const CUresult errorCode);
+  int device_t<OpenACC>::simdWidth();
   //==================================
 }
 
