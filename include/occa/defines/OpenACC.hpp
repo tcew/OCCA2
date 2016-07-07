@@ -8,6 +8,7 @@
 //---[ Defines ]----------------------------------
 #define OCCA_USING_SERIAL   0
 #define OCCA_USING_OPENACC  1
+#define OCCA_USING_OPENMP   0
 #define OCCA_USING_OPENCL   0
 #define OCCA_USING_CUDA     0
 #define OCCA_USING_PTHREADS 0

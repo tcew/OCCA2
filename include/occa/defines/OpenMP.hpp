@@ -11,6 +11,7 @@
 #define OCCA_USING_OPENCL   0
 #define OCCA_USING_CUDA     0
 #define OCCA_USING_PTHREADS 0
+#define OCCA_USING_OPENACC  0
 //================================================
 
 

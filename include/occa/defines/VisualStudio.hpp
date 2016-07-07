@@ -7,6 +7,7 @@
 #define OCCA_OPENMP_ENABLED    1
 #define OCCA_OPENCL_ENABLED    0
 #define OCCA_CUDA_ENABLED      0
+#define OCCA_OPENACC_ENABLED   1
 //======================================
 
 //---[ Build Config ]-------------------
