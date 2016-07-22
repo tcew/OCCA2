@@ -5,6 +5,8 @@
 #include "occa/Serial.hpp"
 #include "occa/OpenCL.hpp"
 #include "occa/CUDA.hpp"
+#include "occa/OpenACC.hpp"
+
 
 // Use events for timing!
 
@@ -37,6 +39,7 @@ namespace occa {
     if(m & CUDA)     return "CUDA";
     if(m & HSA)      return "HSA";
     if(m & Pthreads) return "Pthreads";
+    if(m & OpenACC)  return "OpenACC";
 
     OCCA_CHECK(false, "Mode [" << m << "] is not valid");
 
@@ -52,6 +55,7 @@ namespace occa {
     if(upStr == "CUDA")     return CUDA;
     if(upStr == "HSA")      return HSA;
     if(upStr == "PTHREADS") return Pthreads;
+    if(upStr == "OPENACC")  return OpenACC;
 
     OCCA_CHECK(false, "Mode [" << str << "] is not valid");
 
@@ -75,6 +79,7 @@ namespace occa {
     if(info_ & CUDA)     ret += std::string(count++ ? ", " : "") + "CUDA";
     if(info_ & HSA)      ret += std::string(count++ ? ", " : "") + "HSA";
     if(info_ & Pthreads) ret += std::string(count++ ? ", " : "") + "Pthreads";
+    if(info_ & OpenACC)  ret += std::string(count++ ? ", " : "") + "OpenACC";
 
     if(count)
       return ret;
@@ -137,6 +142,14 @@ namespace occa {
 
   bool hasHSAEnabled() {
 #if OCCA_HSA_ENABLED
+    return true;
+#else
+    return false;
+#endif
+  }
+
+  bool hasOpenACCEnabled() {
+#if OCCA_OPENACC_ENABLED
     return true;
 #else
     return false;
@@ -579,6 +592,7 @@ namespace occa {
     if(mode & CUDA)     return sys::getFilename("[occa]/defines/CUDA.hpp");
     if(mode & HSA)      return sys::getFilename("[occa]/defines/HSA.hpp");
     if(mode & Pthreads) return sys::getFilename("[occa]/defines/Pthreads.hpp");
+    if(mode & OpenACC)  return sys::getFilename("[occa]/defines/OpenACC.hpp");
 
     return "";
   }
@@ -592,6 +606,7 @@ namespace occa {
        (name == "OCCA_USING_OPENCL")   ||
        (name == "OCCA_USING_CUDA")     ||
        (name == "OCCA_USING_PTHREADS") ||
+       (name == "OCCA_USING_OPENACC")  ||
 
        (name == "occaInnerDim0") ||
        (name == "occaInnerDim1") ||
@@ -1707,6 +1722,15 @@ namespace occa {
       dHandle = new device_t<Pthreads>();
       break;
     }
+    case OpenACC:{
+#if OCCA_OPENACC_ENABLED
+      dHandle = new device_t<OpenACC>();
+#else
+      std::cout << "OCCA mode [OpenACC] is not enabled, defaulting to [Serial] mode\n";
+      dHandle = new device_t<Serial>();
+#endif
+      break;
+    }
     default:{
       std::cout << "Unsupported OCCA mode given, defaulting to [Serial] mode\n";
       dHandle = new device_t<Serial>();
@@ -1778,6 +1802,10 @@ namespace occa {
     case Pthreads:{
       aim.set("threadCount", arg1);
       aim.set("pinningInfo", arg2);
+      break;
+    }
+    case OpenACC:{
+      // do nothing for now
       break;
     }
     }
@@ -2336,6 +2364,9 @@ namespace occa {
 #endif
 #if OCCA_CUDA_ENABLED
     device_t<CUDA>::appendAvailableDevices(deviceList);
+#endif
+#if OCCA_OPENACC_ENABLED
+    device_t<OpenACC>::appendAvailableDevices(deviceList);
 #endif
 
     deviceListMutex.unlock();

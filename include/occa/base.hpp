@@ -100,6 +100,7 @@ namespace occa {
   bool hasOpenCLEnabled();
   bool hasCUDAEnabled();
   bool hasHSAEnabled();
+  bool hasOpenACCEnabled();
   //==============================================
 
 
@@ -143,8 +144,9 @@ namespace occa {
   static const occa::mode CUDA     = (1 << 23);
   static const occa::mode HSA      = (1 << 24);
   static const occa::mode Pthreads = (1 << 25);
+  static const occa::mode OpenACC  = (1 << 26);
 
-  static const int onChipMode  = (Serial | OpenMP | Pthreads);
+  static const int onChipMode  = (Serial | OpenMP | Pthreads | OpenACC);
   static const int offChipMode = (OpenCL | CUDA | HSA);
 
   static const occa::mode SerialIndex   = 0;
@@ -153,7 +155,8 @@ namespace occa {
   static const occa::mode CUDAIndex     = 3;
   static const occa::mode HSAIndex      = 4;
   static const occa::mode PthreadsIndex = 5;
-  static const int modeCount = 6;
+  static const occa::mode OpenACCIndex  = 6;
+  static const int modeCount = 7;
 
   std::string modeToStr(const occa::mode &m);
   mode strToMode(const std::string &str);

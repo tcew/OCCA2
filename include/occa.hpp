@@ -14,6 +14,7 @@
 #include "occa/OpenCL.hpp"
 #include "occa/CUDA.hpp"
 #include "occa/HSA.hpp"
+#include "occa/OpenACC.hpp"
 
 #include "occa/defines/vector.hpp"
 

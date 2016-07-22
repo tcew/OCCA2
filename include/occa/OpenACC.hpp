@@ -36,7 +36,7 @@ namespace occa {
 
 
   //---[ Helper Functions ]-----------
-  namespace acc {
+  namespace openacc {
     extern std::string notSupported;
 
     std::string baseCompilerFlag(const int vendor_);
@@ -75,7 +75,7 @@ namespace occa {
                                                       const std::string &functionName);
 
   template <>
-  kernel_t<OpenMP>* kernel_t<OpenACC>::loadFromLibrary(const char *cache,
+  kernel_t<OpenACC>* kernel_t<OpenACC>::loadFromLibrary(const char *cache,
                                                       const std::string &functionName);
 
   template <>

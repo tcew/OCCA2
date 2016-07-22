@@ -721,7 +721,7 @@ namespace occa {
       }
       else{
 #if (OCCA_OS & (LINUX_OS | OSX_OS))
-        compiler = "g++";
+        compiler = "pgcc";
 #else
         compiler = "cl.exe";
 #endif
